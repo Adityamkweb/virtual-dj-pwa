@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual DJ Mobile</title>
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#05070c;color:#fff}
+
+.top{
+  padding:12px;
+  text-align:center;
+  background:linear-gradient(90deg,#00e5ff,#00ff9d);
+  color:#000;
+  font-weight:bold;
+}
+
+canvas{
+  width:100%;
+  height:70px;
+  background:#02040a;
+}
+
+.main{
+  display:flex;
+  gap:8px;
+  padding:10px;
+}
+
+.deck{
+  flex:1;
+  background:#0e1320;
+  border-radius:12px;
+  padding:10px;
+}
+
+.deck h3{
+  text-align:center;
+  color:#00e5ff;
+  margin-bottom:6px;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  margin-top:5px;
+  border:none;
+  border-radius:6px;
+  background:#00e5ff;
+  font-weight:bold;
+}
+
+input[type=range],input[type=file]{width:100%;margin-top:6px}
+
+.mixer{
+  width:80px;
+  background:#0b0f1a;
+  border-radius:12px;
+  padding:8px;
+  text-align:center;
+}
+.vertical{
+  writing-mode:bt-lr;
+  transform:rotate(270deg);
+  width:120px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">🎧 VIRTUAL DJ MOBILE</div>
+
+<canvas id="wave"></canvas>
+
+<div class="main">
+
+  <div class="deck">
+    <h3>DECK A</h3>
+    <input type="file" accept="audio/*" id="fileA">
+    <audio id="aA"></audio>
+    <button onclick="aA.play()">▶ Play</button>
+    <button onclick="aA.pause()">⏸ Pause</button>
+    <input type="range" min="0" max="1" step="0.01" value="1"
+      oninput="aA.volume=this.value">
+  </div>
+
+  <div class="mixer">
+    <p>MIX</p>
+    <input type="range" min="0" max="1" step="0.01" value="0.5"
+      class="vertical" oninput="cross(this.value)">
+  </div>
+
+  <div class="deck">
+    <h3>DECK B</h3>
+    <input type="file" accept="audio/*" id="fileB">
+    <audio id="aB"></audio>
+    <button onclick="aB.play()">▶ Play</button>
+    <button onclick="aB.pause()">⏸ Pause</button>
+    <input type="range" min="0" max="1" step="0.01" value="1"
+      oninput="aB.volume=this.value">
+  </div>
+
+</div>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+
+const aA = document.getElementById("aA");
+const aB = document.getElementById("aB");
+fileA.onchange = e => loadAudio(e,aA);
+fileB.onchange = e => loadAudio(e,aB);
+
+function cross(v){
+  aA.volume = 1 - v;
+  aB.volume = v;
+}
+
+/* WAVEFORM */
+const canvas = document.getElementById("wave");
+const ctx = canvas.getContext("2d");
+const audioCtx = new AudioContext();
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 256;
+const buffer = new Uint8Array(analyser.frequencyBinCount);
+
+function loadAudio(e,a){
+  a.src = URL.createObjectURL(e.target.files[0]);
+  const src = audioCtx.createMediaElementSource(a);
+  src.connect(analyser);
+  analyser.connect(audioCtx.destination);
+}
+
+function draw(){
+  requestAnimationFrame(draw);
+  analyser.getByteFrequencyData(buffer);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  let w = canvas.width / buffer.length;
+  buffer.forEach((v,i)=>{
+    let h = v/2;
+    ctx.fillStyle = "#00e5ff";
+    ctx.fillRect(i*w,canvas.height-h,w-1,h);
+  });
+}
+draw();
+</script>
+
+</body>
+</html>
